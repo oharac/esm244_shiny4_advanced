@@ -1,0 +1,90 @@
+---
+title: "Advanced options in Shiny!"
+author: "Casey O'Hara"
+format: 
+  html:
+    toc: true
+    embed-resources: true
+editor: visual
+theme: darkly
+---
+
+# Setup
+
+In this tutorial, we'll explore several more advanced options in Shiny Apps:
+
+* two-file app (i.e., instead of `app.R` you have separate `server.R` and `ui.R`) and why this might be of interest
+* sourcing additional scripts to be used in your app, e.g., data wrangling, functions, or large portions of text
+* using your data to drive your user interface - e.g., dropdown list of choices comes from data rather than manual coding
+* updating your user interface based on user selections - e.g., if in widget 1, you selection option A, the choices in widget 2 can update to be only those that are relevant to option A.
+
+## Required packages:
+
+* `shiny`
+* `tidyverse`
+* `palmerpenguins`
+
+# Setting up a two-file Shiny App
+
+For large apps, you might want to split the app into multiple files.  This makes it a little less confusing to navigate back and forth between the ui and the server, and can help reduce the risk of merge conflicts if, for example, one collaborator is focusing on the ui while another is focused on the server.
+
+## Set up the `ui.R`
+
+(@) Open a new R script (not Quarto, just script), and save as `ui.R`.  Note that for `app.R` the filename is not actually important, but for this structure it needs to be called `ui.R`.
+
+(@) Attach packages and write the code for the user interface only!
+
+```r
+code for ui.R
+```
+
+## Set up the `server.R`
+
+Open a new R script file, and save it as `server.R`.  Again, here the right name is important!
+
+```r
+code for server.R
+```
+
+# Using additional support files in your Shiny App
+
+Another handy trick is to outsource some of the code to other files.  This can be really helpful as your UI or server code starts to get particularly complicated.  For the user interface, you may wish to put large portions of text in a separate Markdown file, so the ui.R itself is more manageable - instead of writing and editing all the text there, you can edit (and track changes in) a separate file or set of files.  For the functionality, you may wish to define some complex functions outside of the server, that can then be used within the server functionality.
+
+## Including external files for formatted text in the UI
+
+https://shiny.posit.co/r/gallery/application-layout/including-html-text-and-markdown-files/
+
+## Including external files for functionality in the server
+
+### global.R
+
+https://shiny.posit.co/r/articles/improve/scoping/
+
+### sourcing other files
+
+https://shiny.posit.co/r/articles/improve/scoping/
+
+# Using your data to populate choices in your UI widgets
+
+Manually typing in all the choices in an input widget is (a) time consuming, (b) takes up a lot of space and makes the code harder to read, and (c) is not resilient to potential changes in choices if you update your dataset.  Here we'll see how you can instead let the data provide the choice set.
+
+The basic idea is to create a vector of values for a particular variable, then pass that vector to the `choices` argument of the input widget.
+
+```{r}
+basic example
+```
+
+NOTE: The option for using named vectors, so the text the user sees may differ from the values passed to the server, is still possible.
+
+The idea here is that you would create a *named* vector and pass that to the `choices` argument.  Why might you do this?  Perhaps you have text values in your data that are in lower case or upper case, but you'd like the user to see a Sentence case.  Maybe you have month data as a number and want the user to be able to choose it by name.
+
+```{r}
+named vec example
+```
+
+
+# Updating widget options based on user selections
+
+In some cases, a choice on one input widget might lead to a change in the set of options in a different input widget.  For example, in the Penguins data, some species only show up on certain islands, so if a user chooses a particular species, you might want to update the possible choices of island.  Let's try it here with mtcars, where selection of a particular count of cylinders in one widget changes the list of possible cars in another.
+
+
