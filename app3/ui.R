@@ -18,7 +18,7 @@ ui <- navbarPage(
         checkboxGroupInput(
           inputId = 'island',
           label = 'Which island(s)?',
-          choices = unique(penguins$island),
+          choices = unique(penguins$island) %>% setNames(str_to_upper(unique(penguins$island))),
           selected = 'Biscoe')
       ), ### end sidebarPanel
       mainPanel(

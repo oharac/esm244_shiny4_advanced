@@ -6,7 +6,7 @@ format:
     toc: true
     embed-resources: true
 editor: visual
-theme: darkly
+theme: journal
 ---
 
 # Setup
@@ -35,16 +35,84 @@ For large apps, you might want to split the app into multiple files.  This makes
 (@) Attach packages and write the code for the user interface only!
 
 ```r
-code for ui.R
+library(shiny)
+library(tidyverse)
+library(palmerpenguins)
+
+ui <- navbarPage(
+  title = 'Sample App',
+  tabPanel(
+    title = 'Tab 1',
+    sidebarLayout(
+      sidebarPanel(
+      ), ### end sidebarPanel
+      mainPanel(
+      ) ### end mainPanel
+    ) ### end sidebarLayout
+  ) ### end tabPanel
+)
 ```
 
 ## Set up the `server.R`
 
-Open a new R script file, and save it as `server.R`.  Again, here the right name is important!
+(@) Open a new R script file, and save it as `server.R`.  Again, here the right name is important!
 
 ```r
-code for server.R
+server <- function(input, output, session) {
+}
 ```
+
+## Add widgets and outputs to `ui.R`
+
+(@) Go back to `ui.R` and let's add some functionality.  We will just stick with one tab for now, but add some widgets and an output plot.  This should all be pretty straightforward from earlier tutorial videos.
+
+```r
+<more code up here>
+
+    sidebarLayout(
+      sidebarPanel(
+        h3('Sidebar text'),
+        radioButtons(
+          inputId = 'spp',
+          label = 'Which penguin species?',
+          choices = c('Adelie', 'Chinstrap', 'Gentoo'),
+          selected = 'Adelie'),
+        checkboxGroupInput(
+          inputId = 'island',
+          label = 'Which island(s)?',
+          choices = c('Biscoe', 'Dream', 'Torgersen'),
+          selected = 'Biscoe')
+      ), ### end sidebarPanel
+      mainPanel(
+        h2('Main panel'),
+        plotOutput(outputId = 'peng_plot')
+      ) ### end mainPanel
+    ) ### end sidebarLayout
+
+<more code below>
+```
+
+(@) Now let's go into the `server.R` and add some functionality to react to the widgets and produce a plot.
+
+```r
+server <- function(input, output, session) {
+  peng_reactive <- reactive({
+    penguins %>%
+      filter(species %in% input$spp) %>%
+      filter(island %in% input$island)
+  })
+
+  output$peng_plot <- renderPlot({
+    ggplot(data = peng_reactive()) +
+      geom_point(aes(x = flipper_length_mm, y = body_mass_g,
+                     color = species, shape = island)) +
+      theme_minimal()
+  })
+}
+```
+
+(@) Save and run your app to make sure it works.  All we've done here is separate the old `app.R` into two separate files.
+
 
 # Using additional support files in your Shiny App
 
@@ -54,15 +122,65 @@ Another handy trick is to outsource some of the code to other files.  This can b
 
 https://shiny.posit.co/r/gallery/application-layout/including-html-text-and-markdown-files/
 
-## Including external files for functionality in the server
+(@) Let's create two sample text files that we can include in our app.  Create a blank file, call it `intro_text.txt` to be a generic text file.  To that file, add some boilerplate text.
 
-### global.R
+```r
+## `intro_text.txt`
 
-https://shiny.posit.co/r/articles/improve/scoping/
+Here is some intro text...  Using includeText will include it formatted as a basic HTML text, but doesn't give much flexibility in formatting.
+```
 
-### sourcing other files
+(@) Now do the same thing, but this time call the file `intro_text.md` for a Markdown file.  Technically, the extension doesn't really matter, but it would be confusing to anyone trying to interpret your code.  This time, add some text including some Markdown style formatting cues.
 
-https://shiny.posit.co/r/articles/improve/scoping/
+```r
+## `intro_text.md`
+
+This is written in **Markdown** and the output from `includeMarkdown()` will show up with appropriate formatting.
+
+That means, you can do all the fancy Markdown formatting in this file instead of inside your ui.R, so your user interface code is easier to read.  Any changes in the text can just be done on this file, instead of in ui.R, meaning less likely to break something...
+```
+
+(@) Now, let's have these show up in our UI!  Open `ui.R`, and let's add a new introduction tab before our Tab 1.  Note how each of the files is formatted.
+
+```r
+ui <- navbarPage(
+  title = 'Sample App',
+  tabPanel(
+    title = 'Intro',
+    includeText('intro_text.txt'),   # <1>
+    includeMarkdown('intro_text.md') # <2>
+  ),
+  tabPanel(
+    title = 'Tab 1' ...
+
+<more code down here>
+```
+1. `includeText` will try to interpret any file as plain text (regardless of the extension).
+2. `includeMarkdown` will try to interpret any file as Markdown (regardless of the extension).
+
+
+## Including `global.R` for external code
+
+If you have a lot of code that doesn't *need* to go inside the `server.R` (e.g., reading in lots of files, pre-filtering data, defining lots of non-reactive helper functions), it may be helpful to put them in an additional file called `global.R`.  This will be executed before the ui and server files, so the results will be available to all levels of your app (i.e., "globally").
+
+See [https://shiny.posit.co/r/articles/improve/scoping/](https://shiny.posit.co/r/articles/improve/scoping/) for more details.
+
+(@) Create a new blank file called `global.R` in the same directory as `ui.R` and `server.R`.
+
+(@) Go to the top of `ui.R` where you attached packages, and cut those lines from that script, and paste them into `global.R`.  Let's also do some pre-processing of the penguins data.
+
+```r
+library(shiny)
+library(tidyverse)
+library(palmerpenguins)
+
+### load data, prep it for the app; define functions; etc.
+penguins <- penguins %>%
+  drop_na()
+```
+
+(@) If you run the app, there should be no noticeable difference, but your three files give some flexibility for where and how to organize your code to make the most sense for you and your teammates.
+
 
 # Using your data to populate choices in your UI widgets
 
@@ -70,21 +188,88 @@ Manually typing in all the choices in an input widget is (a) time consuming, (b)
 
 The basic idea is to create a vector of values for a particular variable, then pass that vector to the `choices` argument of the input widget.
 
-```{r}
-basic example
+(@) To mess with things a little, let's slightly modify our `global.R` by lower-casing the species names.
+
+```r
+<library stuff up here>
+
+penguins <- penguins %>%
+  drop_na() %>%
+  mutate(species = str_to_lower(species))
 ```
 
-NOTE: The option for using named vectors, so the text the user sees may differ from the values passed to the server, is still possible.
+(@) Open up your `ui.R` file and let's change the choices option in the `radioButtons` and `checkboxGroupInput` definitions.
 
-The idea here is that you would create a *named* vector and pass that to the `choices` argument.  Why might you do this?  Perhaps you have text values in your data that are in lower case or upper case, but you'd like the user to see a Sentence case.  Maybe you have month data as a number and want the user to be able to choose it by name.
+```r
+<more code up here>
 
-```{r}
-named vec example
+        radioButtons(
+          inputId = 'spp',
+          label = 'Which penguin species?',
+          choices = unique(penguins$species), # <1>
+          selected = 'Adelie'),               # <2>
+        checkboxGroupInput(
+          inputId = 'island',
+          label = 'Which island(s)?',
+          choices = unique(penguins$island),  # <1>
+          selected = 'Biscoe')
+
+<more code below>
 ```
+1. Here we grab the unique species (or island) listed in the penguins dataframe, and use that to populate the choices for our app.
+2. Since we converted species names to lower case, will this work?
+
+(@) NOTE: The option for using named vectors, so the **values the user sees** may differ from the **values passed to the server**, is still possible.  The idea here is that you would create a *named* vector and pass that to the `choices` argument.  Why might you do this?  Perhaps you have text values in your data that are in lower case or upper case, but you'd like the user to see a Sentence case.  Maybe you have month data as a number and want the user to be able to choose it by name.  Or here, let's (for some reason) set the island names to be all caps!
+
+```r
+        checkboxGroupInput(
+          inputId = 'island',
+          label = 'Which island(s)?',
+          choices = unique(penguins$island) %>% setNames(str_to_upper(unique(penguins$island))), # <1>
+          selected = 'Biscoe')
+```
+1. Note that even though the labels are ALL CAPS, behind the scenes, the widget is still passing the unmodified island names - otherwise everything would break!
 
 
 # Updating widget options based on user selections
 
-In some cases, a choice on one input widget might lead to a change in the set of options in a different input widget.  For example, in the Penguins data, some species only show up on certain islands, so if a user chooses a particular species, you might want to update the possible choices of island.  Let's try it here with mtcars, where selection of a particular count of cylinders in one widget changes the list of possible cars in another.
+In some cases, a choice on one input widget might lead to a change in the set of options in a different input widget.  For example, in the Penguins data, some species only show up on certain islands, so if a user chooses a particular species, you might want to update the possible choices of island.
+
+(@) To have the ui update itself based on user choices, oddly we don't have to modify the `ui.R` itself.  Instead we can add something in the `server.R`.  Open that up and let's add an `observeEvent()` call.
+
+```r
+<more server code up here>
+
+  observeEvent(input$spp, {
+    updateCheckboxGroupInput(
+      inputId = "island")
+  })
+  
+<more server code down here>
+```
+
+(@) That basically says, "if we observe some change in `input$spp`, then update the widget with `inputId` "island".  But we haven't said what to update, so let's add that.  We'll filter to create a *new* vector of island names, then tell the `updateCheckboxGroupInput` to update the choices.  You could also update other aspects of the input.  Each input type should have an updater along the lines of `updateNameOfInputType`.
+
+```r
+<more server code up here>
+
+  observeEvent(input$spp, {
+    peng_spp_df <- penguins %>%
+      filter(species == input$spp)
+    islands_vec <- peng_spp_df$island %>% unique()
+
+    updateCheckboxGroupInput(
+      inputId = "island",
+      choices = islands_vec)
+  })
+  
+<more server code down here>
+```
+
+(@) Run the app, and select different penguin species to note how the checkboxes change.
+
+# Wrap up
+
+This has been a pretty trivial example, but think about how you could use the multi-file structure to clean up and organize your code. Consider how much time and effort you could save by using variable values to populate the input widgets, and how much more user friendly your app would be if it could update widgets to guide the user to make logical choices.
 
 

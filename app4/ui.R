@@ -14,7 +14,7 @@ ui <- navbarPage(
           inputId = 'spp',
           label = 'Which penguin species?',
           choices = unique(penguins$species),
-          selected = 'Adelie'),
+          selected = 'adelie'),
         checkboxGroupInput(
           inputId = 'island',
           label = 'Which island(s)?',
